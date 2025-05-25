@@ -185,6 +185,11 @@ class NoteController extends GetxController {
     }
   }
   
+  // Alias for deleteNotePermanently - used by BookController
+  Future<void> deleteNote(String noteId) async {
+    return deleteNotePermanently(noteId);
+  }
+  
   List<Note> getNotesByFolder(String folderId) {
     return notes.where((note) => note.folderId == folderId).toList();
   }

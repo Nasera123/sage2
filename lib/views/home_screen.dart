@@ -17,8 +17,9 @@ import 'trash_view.dart';
 import '../widgets/add_note_dialog.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/add_folder_dialog.dart';
-import '../widgets/add_book_dialog.dart';
+import 'book_editor_view.dart';
 import 'note_editor_view.dart';
+import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -50,20 +51,20 @@ class _HomeScreenState extends State<HomeScreen> {
       final currentIndex = _navigationController.currentIndex;
       
       return Scaffold(
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF121212),
+          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
           elevation: 0,
-          title: const Text('SAGE', 
+          title: Text('SAGE', 
               style: TextStyle(
-                color: Colors.white,
+                color: Theme.of(context).appBarTheme.foregroundColor,
                 fontWeight: FontWeight.bold,
                 fontSize: 20,
               )),
           leadingWidth: 40,
           leading: Builder(
             builder: (context) => IconButton(
-              icon: const Icon(Icons.menu, color: Colors.white),
+              icon: Icon(Icons.menu, color: Theme.of(context).appBarTheme.iconTheme?.color),
               onPressed: () {
                 Scaffold.of(context).openDrawer();
               },
@@ -71,20 +72,23 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.search, color: Colors.white),
+              icon: Icon(Icons.search, color: Theme.of(context).appBarTheme.iconTheme?.color),
               onPressed: () {
                 _showSearch();
               },
             ),
             IconButton(
-              icon: const Icon(Icons.settings_outlined, color: Colors.white),
+              icon: Icon(Icons.settings_outlined, color: Theme.of(context).appBarTheme.iconTheme?.color),
               onPressed: () {
                 _navigationController.setCurrentIndex(4); // Settings view
               },
             ),
             IconButton(
-              icon: const Icon(Icons.arrow_forward, color: Colors.white),
-              onPressed: () {},
+              icon: Icon(Icons.logout, color: Theme.of(context).appBarTheme.iconTheme?.color),
+              tooltip: 'Logout',
+              onPressed: () {
+                _logout();
+              },
             ),
           ],
         ),
@@ -95,7 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
         floatingActionButton: FloatingActionButton(
           backgroundColor: const Color(0xFF3D5AFE),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          onPressed: () => _createAndNavigateToNewNote(),
+          onPressed: () => _createAction(context, currentIndex),
           child: const Icon(Icons.add, color: Colors.white),
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
@@ -104,6 +108,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   
   Widget _buildNotesHomeView() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -112,7 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xFF1E1E1E),
+            color: isDarkMode ? const Color(0xFF1A1A1A) : Colors.grey[100],
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
@@ -128,7 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ? FileImage(File(avatarPath))
                           : null,
                       child: avatarPath == null
-                          ? const Icon(Icons.person, size: 40, color: Colors.white70)
+                          ? Icon(Icons.person, size: 40, color: isDarkMode ? Colors.white70 : Colors.black54)
                           : null,
                     );
                   }),
@@ -140,7 +146,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       height: 14,
                       decoration: BoxDecoration(
                         color: Colors.green,
-                        border: Border.all(color: const Color(0xFF1E1E1E), width: 2),
+                        border: Border.all(color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.grey[200]!, width: 2),
                         borderRadius: BorderRadius.circular(7),
                       ),
                     ),
@@ -154,8 +160,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Obx(() => Text(
                       _preferencesController.preferences.displayName ?? 'Theodore Lunette',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: isDarkMode ? Colors.white : Colors.black,
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
                       ),
@@ -177,11 +183,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        const Expanded(
+                        Expanded(
                           child: Text(
                             'Tap to edit profile',
                             style: TextStyle(
-                              color: Colors.grey,
+                              color: isDarkMode ? Colors.grey : Colors.black54,
                               fontSize: 12,
                             ),
                             overflow: TextOverflow.ellipsis,
@@ -193,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.edit, color: Colors.grey),
+                icon: Icon(Icons.edit, color: isDarkMode ? Colors.grey : Colors.black54),
                 onPressed: () {
                   // Edit profile
                 },
@@ -203,12 +209,12 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         
         // All Notes Header
-        const Padding(
-          padding: EdgeInsets.all(16.0),
+        Padding(
+          padding: const EdgeInsets.all(16.0),
           child: Text(
             'All Notes',
             style: TextStyle(
-              color: Colors.white,
+              color: isDarkMode ? Colors.white : Colors.black,
               fontWeight: FontWeight.bold,
               fontSize: 24,
             ),
@@ -224,24 +230,26 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   
   Widget _buildNotesList() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Obx(() {
       final notes = _noteController.notes;
       
       if (notes.isEmpty) {
-        return const Center(
+        return Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.note_alt_outlined, size: 64, color: Colors.grey),
-              SizedBox(height: 16),
+              Icon(Icons.note_alt_outlined, size: 64, color: isDarkMode ? Colors.grey : Colors.black38),
+              const SizedBox(height: 16),
               Text(
                 'No notes yet',
-                style: TextStyle(color: Colors.grey, fontSize: 16),
+                style: TextStyle(color: isDarkMode ? Colors.grey : Colors.black54, fontSize: 16),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
                 'Tap + to create a new note',
-                style: TextStyle(color: Colors.grey, fontSize: 14),
+                style: TextStyle(color: isDarkMode ? Colors.grey : Colors.black45, fontSize: 14),
               ),
             ],
           ),
@@ -260,6 +268,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   
   Widget _buildNoteCard(Note note) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return GestureDetector(
       onTap: () {
         Navigator.of(context).push(
@@ -272,8 +282,16 @@ class _HomeScreenState extends State<HomeScreen> {
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF1E1E1E),
+          color: isDarkMode ? const Color(0xFF1A1A1A) : Colors.white,
           borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: isDarkMode ? Colors.black.withOpacity(0.2) : Colors.grey.withOpacity(0.2),
+              spreadRadius: 1,
+              blurRadius: 3,
+              offset: const Offset(0, 1),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -283,16 +301,16 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Text(
                   note.title,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.white : Colors.black,
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
                   ),
                 ),
                 Text(
                   _formatDate(note.updatedAt),
-                  style: const TextStyle(
-                    color: Colors.grey,
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.grey : Colors.black54,
                     fontSize: 12,
                   ),
                 ),
@@ -301,8 +319,8 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 8),
             Text(
               _getContentPreview(note.content),
-              style: const TextStyle(
-                color: Colors.grey,
+              style: TextStyle(
+                color: isDarkMode ? Colors.grey : Colors.black54,
                 fontSize: 14,
               ),
               maxLines: 2,
@@ -338,11 +356,10 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
   
-  void _handleAddAction() {
-    int index = _navigationController.currentIndex;
-    switch (index) {
-      case 0: // All Notes
-        _showAddNoteDialog();
+  void _createAction(BuildContext context, int currentIndex) {
+    switch (currentIndex) {
+      case 0: // Notes
+        _createAndNavigateToNewNote();
         break;
       case 1: // Folders
         _showAddFolderDialog();
@@ -353,6 +370,8 @@ class _HomeScreenState extends State<HomeScreen> {
       case 3: // Tags
         _showAddTagDialog();
         break;
+      default:
+        _createAndNavigateToNewNote();
     }
   }
   
@@ -388,10 +407,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   
   void _showAddBookDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => const AddBookDialog(),
-    );
+    Get.to(() => const BookEditorView());
   }
   
   void _showAddTagDialog() {
@@ -429,26 +445,27 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   
   void _showSearch() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final searchController = TextEditingController();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
-        title: const Text('Search Notes', style: TextStyle(color: Colors.white)),
+        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        title: Text('Search Notes', style: TextStyle(color: isDarkMode ? Colors.white : Colors.black)),
         content: TextField(
           controller: searchController,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Search',
-            labelStyle: TextStyle(color: Colors.grey),
-            prefixIcon: Icon(Icons.search, color: Colors.grey),
+            labelStyle: TextStyle(color: isDarkMode ? Colors.grey : Colors.black54),
+            prefixIcon: Icon(Icons.search, color: isDarkMode ? Colors.grey : Colors.black54),
             enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: Colors.grey),
+              borderSide: BorderSide(color: isDarkMode ? Colors.grey : Colors.black38),
             ),
-            focusedBorder: UnderlineInputBorder(
+            focusedBorder: const UnderlineInputBorder(
               borderSide: BorderSide(color: Colors.indigo),
             ),
           ),
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
           autofocus: true,
           onSubmitted: (value) {
             if (value.isNotEmpty) {
@@ -463,7 +480,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () {
               Navigator.pop(context);
             },
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            child: Text('Cancel', style: TextStyle(color: isDarkMode ? Colors.grey : Colors.black54)),
           ),
           TextButton(
             onPressed: () {
@@ -473,7 +490,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 _showSearchResults(searchResults, searchController.text);
               }
             },
-            child: const Text('Search', style: TextStyle(color: Colors.indigo)),
+            child: Text('Search', style: const TextStyle(color: Colors.indigo)),
           ),
         ],
       ),
@@ -559,6 +576,34 @@ class _HomeScreenState extends State<HomeScreen> {
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Empty Trash'),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  void _logout() {
+    // Show confirmation dialog
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: const Color(0xFF222222),
+        title: const Text('Logout', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'Are you sure you want to logout?',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              Get.offAll(() => const LoginScreen());
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Logout'),
           ),
         ],
       ),

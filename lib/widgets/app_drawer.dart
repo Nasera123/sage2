@@ -6,7 +6,7 @@ import '../controllers/folder_controller.dart';
 import '../controllers/navigation_controller.dart';
 import '../widgets/add_note_dialog.dart';
 import '../widgets/add_folder_dialog.dart';
-import '../widgets/add_book_dialog.dart';
+import '../views/book_editor_view.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -15,9 +15,10 @@ class AppDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final preferencesController = Get.find<PreferencesController>();
     final folderController = Get.find<FolderController>();
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Drawer(
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: Theme.of(context).drawerTheme.backgroundColor,
       child: Column(
         children: [
           // User Profile Section
@@ -35,14 +36,14 @@ class AppDrawer extends StatelessWidget {
           }),
           
           // Private Section
-          const Padding(
-            padding: EdgeInsets.only(left: 16, top: 16, bottom: 8),
+          Padding(
+            padding: const EdgeInsets.only(left: 16, top: 16, bottom: 8),
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 'PRIVATE',
                 style: TextStyle(
-                  color: Colors.grey,
+                  color: isDarkMode ? Colors.grey : Colors.black54,
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                 ),
@@ -56,8 +57,8 @@ class AppDrawer extends StatelessWidget {
           _buildNavItem(context, Icons.book_outlined, 'My Books', () {
             _navigateAndClose(context, 2); // Books view
           }),
-          _buildNavItem(context, Icons.book_outlined, 'New Book', () {
-            _showAddBookDialog(context);
+          _buildNavItem(context, Icons.add_box_outlined, 'New Book', () {
+            _showAddBookScreen(context);
           }),
           _buildNavItem(context, Icons.note_add_outlined, 'New page', () {
             _showAddNoteDialog(context);
@@ -108,15 +109,14 @@ class AppDrawer extends StatelessWidget {
     );
   }
   
-  void _showAddBookDialog(BuildContext context) {
+  void _showAddBookScreen(BuildContext context) {
     Navigator.of(context).pop(); // Close drawer first
-    showDialog(
-      context: context,
-      builder: (context) => const AddBookDialog(),
-    );
+    Get.to(() => const BookEditorView());
   }
   
   Widget _buildUserProfileHeader(BuildContext context, PreferencesController controller) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Obx(() {
       return Container(
         padding: const EdgeInsets.all(16),
@@ -129,7 +129,7 @@ class AppDrawer extends StatelessWidget {
                   ? FileImage(File(controller.preferences.avatarPath!))
                   : null,
               child: controller.preferences.avatarPath == null
-                  ? const Icon(Icons.person, color: Colors.white70)
+                  ? Icon(Icons.person, color: isDarkMode ? Colors.white70 : Colors.black54)
                   : null,
             ),
             const SizedBox(width: 12),
@@ -139,16 +139,16 @@ class AppDrawer extends StatelessWidget {
                 children: [
                   Text(
                     controller.preferences.displayName ?? 'User',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: isDarkMode ? Colors.white : Colors.black,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
                   ),
-                  const Text(
+                  Text(
                     'Tap to edit profile',
                     style: TextStyle(
-                      color: Colors.grey,
+                      color: isDarkMode ? Colors.grey : Colors.black54,
                       fontSize: 12,
                     ),
                   ),
@@ -156,11 +156,11 @@ class AppDrawer extends StatelessWidget {
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.more_vert, color: Colors.white70),
+              icon: Icon(Icons.more_vert, color: isDarkMode ? Colors.white70 : Colors.black54),
               onPressed: () {},
             ),
             IconButton(
-              icon: const Icon(Icons.settings_outlined, color: Colors.white70),
+              icon: Icon(Icons.settings_outlined, color: isDarkMode ? Colors.white70 : Colors.black54),
               onPressed: () {
                 _navigateAndClose(context, 4); // Settings view
               },
@@ -172,40 +172,46 @@ class AppDrawer extends StatelessWidget {
   }
   
   Widget _buildSearchBar(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.grey[850],
+          color: isDarkMode ? Colors.grey[850] : Colors.grey[200],
           borderRadius: BorderRadius.circular(8),
         ),
-        child: const TextField(
+        child: TextField(
           decoration: InputDecoration(
             hintText: 'Search',
-            hintStyle: TextStyle(color: Colors.grey),
-            prefixIcon: Icon(Icons.search, color: Colors.grey),
+            hintStyle: TextStyle(color: isDarkMode ? Colors.grey : Colors.black54),
+            prefixIcon: Icon(Icons.search, color: isDarkMode ? Colors.grey : Colors.black54),
             border: InputBorder.none,
-            contentPadding: EdgeInsets.symmetric(vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(vertical: 12),
           ),
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
         ),
       ),
     );
   }
   
   Widget _buildNavItem(BuildContext context, IconData icon, String title, VoidCallback onTap, {bool showArrow = false}) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return ListTile(
-      leading: Icon(icon, color: Colors.white70),
+      leading: Icon(icon, color: isDarkMode ? Colors.white70 : Colors.black87),
       title: Text(
         title,
-        style: const TextStyle(color: Colors.white),
+        style: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
       ),
-      trailing: showArrow ? const Icon(Icons.keyboard_arrow_down, color: Colors.white70) : null,
+      trailing: showArrow ? Icon(Icons.keyboard_arrow_down, color: isDarkMode ? Colors.white70 : Colors.black54) : null,
       onTap: onTap,
     );
   }
   
   Widget _buildFoldersSection(BuildContext context, FolderController folderController) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -214,16 +220,16 @@ class AppDrawer extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'FOLDERS',
                 style: TextStyle(
-                  color: Colors.grey,
+                  color: isDarkMode ? Colors.grey : Colors.black54,
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.add, color: Colors.white70, size: 20),
+                icon: Icon(Icons.add, color: isDarkMode ? Colors.white70 : Colors.black54, size: 20),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
                 onPressed: () => _showAddFolderDialog(context),
@@ -233,11 +239,11 @@ class AppDrawer extends StatelessWidget {
         ),
         Obx(() {
           if (folderController.folders.isEmpty) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
               child: Text(
                 'No folders yet',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: isDarkMode ? Colors.grey : Colors.black54),
               ),
             );
           }
@@ -249,16 +255,13 @@ class AppDrawer extends StatelessWidget {
             itemBuilder: (context, index) {
               final folder = folderController.folders[index];
               return ListTile(
-                leading: const Icon(Icons.folder_outlined, color: Colors.white70),
+                leading: Icon(Icons.folder_outlined, color: isDarkMode ? Colors.white70 : Colors.black87),
                 title: Text(
                   folder.name,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
                 ),
                 onTap: () {
-                  Navigator.of(context).pop(); // Close drawer
-                  // Navigate to folder view with the selected folder
-                  Get.find<NavigationController>().setCurrentIndex(1);
-                  Get.find<FolderController>().selectFolder(folder.id);
+                  _navigateAndClose(context, 1); // Navigate to folders view
                 },
               );
             },
@@ -269,40 +272,42 @@ class AppDrawer extends StatelessWidget {
   }
   
   Widget _buildSharedSection(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 16, top: 16, bottom: 8),
+        Padding(
+          padding: const EdgeInsets.only(left: 16, top: 16, bottom: 8),
           child: Text(
             'SHARED',
             style: TextStyle(
-              color: Colors.grey,
+              color: isDarkMode ? Colors.grey : Colors.black54,
               fontSize: 12,
               fontWeight: FontWeight.bold,
             ),
           ),
         ),
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
           child: Text(
             'Shared pages will go here',
-            style: TextStyle(color: Colors.grey),
+            style: TextStyle(color: isDarkMode ? Colors.grey : Colors.black54),
           ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [
-              const Icon(Icons.share, color: Colors.white70, size: 16),
+              Icon(Icons.share, color: isDarkMode ? Colors.white70 : Colors.black87, size: 16),
               const SizedBox(width: 8),
               GestureDetector(
                 onTap: () {
                   // Start collaborating action
                 },
-                child: const Text(
+                child: Text(
                   'Start collaborating',
-                  style: TextStyle(color: Colors.white70),
+                  style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black87),
                 ),
               ),
             ],

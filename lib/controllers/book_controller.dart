@@ -36,6 +36,15 @@ class BookController extends GetxController {
     }
   }
   
+  Future<Book?> getBook(String bookId) async {
+    try {
+      return await _storageService.getBook(bookId);
+    } catch (e) {
+      debugPrint('Error getting book: $e');
+      return null;
+    }
+  }
+  
   Future<Book> createBook(String title, {String? coverImagePath}) async {
     final book = Book(
       title: title, 

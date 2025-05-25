@@ -8,7 +8,7 @@ import 'controllers/book_controller.dart';
 import 'controllers/tag_controller.dart';
 import 'controllers/preferences_controller.dart';
 import 'controllers/navigation_controller.dart';
-import 'views/home_screen.dart';
+import 'views/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,6 +43,26 @@ class MyApp extends StatelessWidget {
           seedColor: Colors.indigo,
           brightness: Brightness.light,
         ),
+        scaffoldBackgroundColor: const Color(0xFFF5F7FA),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFFF5F7FA),
+          foregroundColor: Colors.black,
+          elevation: 0,
+          iconTheme: IconThemeData(color: Colors.black),
+        ),
+        cardColor: Colors.white,
+        dividerColor: const Color(0xFFE6E8ED),
+        drawerTheme: const DrawerThemeData(
+          backgroundColor: Colors.white,
+        ),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: Colors.white,
+          indicatorColor: Colors.indigo.shade100,
+          labelTextStyle: MaterialStateProperty.all(
+            const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)
+          ),
+        ),
+        textTheme: Typography.blackMountainView,
         useMaterial3: true,
       ),
       darkTheme: ThemeData(
@@ -61,10 +81,17 @@ class MyApp extends StatelessWidget {
         drawerTheme: const DrawerThemeData(
           backgroundColor: Color(0xFF121212),
         ),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: const Color(0xFF1A1A1A),
+          indicatorColor: Colors.indigo.shade700,
+          labelTextStyle: MaterialStateProperty.all(
+            const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white)
+          ),
+        ),
         useMaterial3: true,
       ),
       themeMode: preferencesController.themeMode,
-      home: const HomeScreen(),
+      home: const SplashScreen(),
       debugShowCheckedModeBanner: false,
     );
   }

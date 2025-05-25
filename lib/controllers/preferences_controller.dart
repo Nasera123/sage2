@@ -79,6 +79,76 @@ class PreferencesController extends GetxController {
     Get.updateLocale(locale);
   }
   
+  Future<void> setEmail(String email) async {
+    final updatedPreferences = _preferences.value.copyWith(
+      email: email,
+    );
+    await updatePreferences(updatedPreferences);
+  }
+  
+  Future<void> setDefaultFontFamily(String fontFamily) async {
+    final updatedPreferences = _preferences.value.copyWith(
+      defaultFontFamily: fontFamily,
+    );
+    await updatePreferences(updatedPreferences);
+  }
+  
+  Future<void> setDefaultFontSize(double fontSize) async {
+    final updatedPreferences = _preferences.value.copyWith(
+      defaultFontSize: fontSize,
+    );
+    await updatePreferences(updatedPreferences);
+  }
+  
+  Future<void> setAutoSave(bool autoSave) async {
+    final updatedPreferences = _preferences.value.copyWith(
+      autoSave: autoSave,
+    );
+    await updatePreferences(updatedPreferences);
+  }
+  
+  Future<void> setSpellCheck(bool spellCheck) async {
+    final updatedPreferences = _preferences.value.copyWith(
+      spellCheck: spellCheck,
+    );
+    await updatePreferences(updatedPreferences);
+  }
+  
+  Future<void> setGrammarCheck(bool grammarCheck) async {
+    final updatedPreferences = _preferences.value.copyWith(
+      grammarCheck: grammarCheck,
+    );
+    await updatePreferences(updatedPreferences);
+  }
+  
+  Future<void> setDefaultParagraphSpacing(String spacing) async {
+    final updatedPreferences = _preferences.value.copyWith(
+      defaultParagraphSpacing: spacing,
+    );
+    await updatePreferences(updatedPreferences);
+  }
+  
+  Future<void> setDefaultLineSpacing(String spacing) async {
+    final updatedPreferences = _preferences.value.copyWith(
+      defaultLineSpacing: spacing,
+    );
+    await updatePreferences(updatedPreferences);
+  }
+  
+  Future<void> setShowWordCount(bool show) async {
+    final updatedPreferences = _preferences.value.copyWith(
+      showWordCount: show,
+    );
+    await updatePreferences(updatedPreferences);
+  }
+  
+  Future<void> setFocusMode(bool focusMode) async {
+    final updatedPreferences = _preferences.value.copyWith(
+      focusMode: focusMode,
+    );
+    await updatePreferences(updatedPreferences);
+  }
+  
   Locale _getLocaleFromLanguageCode(String languageCode) {
     switch (languageCode) {
       case 'en':

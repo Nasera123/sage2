@@ -1,9 +1,13 @@
 import 'dart:io';
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_quill/flutter_quill.dart' as quill;
 import '../controllers/note_controller.dart';
 import '../controllers/tag_controller.dart';
 import '../models/note_model.dart';
@@ -22,14 +26,23 @@ class _NoteEditorViewState extends State<NoteEditorView> {
   late final TagController _tagController;
   late final TextEditingController _titleController;
   late final TextEditingController _contentController;
+  final FocusNode _titleFocus = FocusNode();
+  final FocusNode _editorFocus = FocusNode();
+  final GlobalKey _editorKey = GlobalKey();
+  
   Note? _note;
   bool _isLoading = true;
   bool _isDirty = false;
   bool _showToolbar = false;
+  bool _hasTextSelection = false;
   Timer? _typingTimer;
   Timer? _autoSaveTimer;
-  final FocusNode _titleFocus = FocusNode();
-  final FocusNode _editorFocus = FocusNode();
+  
+  // Simple formatting tracking
+  int _boldStart = -1;
+  int _boldEnd = -1;
+  int _italicStart = -1;
+  int _italicEnd = -1;
   
   @override
   void initState() {
@@ -38,6 +51,7 @@ class _NoteEditorViewState extends State<NoteEditorView> {
     _tagController = Get.find<TagController>();
     _titleController = TextEditingController();
     _contentController = TextEditingController();
+    
     _loadNote();
     
     // Setup auto-save timer
@@ -74,17 +88,15 @@ class _NoteEditorViewState extends State<NoteEditorView> {
       // Listen for changes to mark as dirty and trigger auto-save
       _titleController.addListener(() {
         _markDirty();
-        // Update the app bar title immediately
         if (_note != null && mounted) {
-          setState(() {
-            // We don't immediately save the title, it'll be saved on the next auto-save
-          });
+          setState(() {});
         }
       });
       
       _contentController.addListener(() {
         _markDirty();
         _resetTypingTimer();
+        _checkTextSelection();
       });
     }
     
@@ -94,10 +106,24 @@ class _NoteEditorViewState extends State<NoteEditorView> {
     });
   }
   
+  void _checkTextSelection() {
+    final selection = _contentController.selection;
+    final hasSelection = selection.isValid && selection.start != selection.end;
+    
+    if (hasSelection != _hasTextSelection) {
+      setState(() {
+        _hasTextSelection = hasSelection;
+        _showToolbar = hasSelection ? true : _showToolbar;
+      });
+    }
+  }
+  
   void _resetTypingTimer() {
-    setState(() {
-      _showToolbar = false;
-    });
+    if (!_hasTextSelection) {
+      setState(() {
+        _showToolbar = false;
+      });
+    }
     
     _typingTimer?.cancel();
     _typingTimer = Timer(const Duration(seconds: 5), () {
@@ -119,7 +145,7 @@ class _NoteEditorViewState extends State<NoteEditorView> {
   
   Future<void> _saveChanges() async {
     if (_isDirty && _note != null) {
-      // Update note
+      // Update note with current content
       final updatedNote = _note!.copyWith(
         title: _titleController.text,
         content: _contentController.text,
@@ -187,6 +213,85 @@ class _NoteEditorViewState extends State<NoteEditorView> {
     }
   }
   
+  // Handle back navigation with proper result
+  void _handleBackPress() async {
+    await _saveChanges();
+    Get.back(result: true);
+  }
+  
+  // Handle delete and navigation
+  void _handleDeletePress() async {
+    await _noteController.moveNoteToTrash(_note!.id);
+    Get.back(result: true);
+  }
+  
+  void _insertFormatting(String prefix, String suffix) {
+    final currentText = _contentController.text;
+    final selection = _contentController.selection;
+    
+    if (selection.isValid) {
+      // Get the selected text
+      final selectedText = currentText.substring(selection.start, selection.end);
+      
+      // Check if the selected text already has this formatting
+      bool alreadyHasFormatting = false;
+      
+      if (prefix == '**' && suffix == '**') {
+        alreadyHasFormatting = selectedText.startsWith('**') && selectedText.endsWith('**');
+      } else if (prefix == '_' && suffix == '_') {
+        alreadyHasFormatting = selectedText.startsWith('_') && selectedText.endsWith('_');
+      } else if (prefix == '~~' && suffix == '~~') {
+        alreadyHasFormatting = selectedText.startsWith('~~') && selectedText.endsWith('~~');
+      }
+      
+      String newText;
+      int newStart, newEnd;
+      
+      if (alreadyHasFormatting) {
+        // If already formatted, remove the formatting
+        newText = selectedText.substring(prefix.length, selectedText.length - suffix.length);
+        newStart = selection.start;
+        newEnd = selection.start + newText.length;
+      } else {
+        // Add the formatting
+        newText = prefix + selectedText + suffix;
+        newStart = selection.start + prefix.length;
+        newEnd = selection.end + prefix.length;
+      }
+      
+      final newTextWithReplacement = currentText.replaceRange(
+        selection.start, 
+        selection.end, 
+        newText
+      );
+      
+      _contentController.value = TextEditingValue(
+        text: newTextWithReplacement,
+        selection: TextSelection(
+          baseOffset: newStart,
+          extentOffset: newEnd,
+        ),
+      );
+    } else if (selection.baseOffset >= 0) {
+      // No selection, just insert at cursor
+      final currentPosition = selection.baseOffset;
+      final newText = currentText.substring(0, currentPosition) + 
+                     prefix + suffix + 
+                     currentText.substring(currentPosition);
+      
+      _contentController.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(
+          offset: currentPosition + prefix.length,
+        ),
+      );
+    }
+    
+    // Focus back on the editor and mark as dirty
+    _editorFocus.requestFocus();
+    _markDirty();
+  }
+  
   String _formatDateTime(DateTime date) {
     final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return '${months[date.month - 1]} ${date.day}, ${date.hour}:${date.minute.toString().padLeft(2, '0')} ${date.hour >= 12 ? 'PM' : 'AM'}';
@@ -223,10 +328,7 @@ class _NoteEditorViewState extends State<NoteEditorView> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            _saveChanges();
-            Navigator.pop(context);
-          },
+          onPressed: _handleBackPress,
         ),
         title: Text(
           _titleController.text.isEmpty ? 'New Note' : _titleController.text,
@@ -239,10 +341,7 @@ class _NoteEditorViewState extends State<NoteEditorView> {
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.white),
-            onPressed: () {
-              _noteController.moveNoteToTrash(_note!.id);
-              Navigator.pop(context);
-            },
+            onPressed: _handleDeletePress,
           ),
           IconButton(
             icon: const Icon(Icons.tag, color: Colors.white),
@@ -299,6 +398,7 @@ class _NoteEditorViewState extends State<NoteEditorView> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   child: TextField(
+                    key: _editorKey,
                     controller: _contentController,
                     focusNode: _editorFocus,
                     maxLines: null,
@@ -314,49 +414,82 @@ class _NoteEditorViewState extends State<NoteEditorView> {
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.zero,
                     ),
+                    onTap: () {
+                      Future.delayed(const Duration(milliseconds: 100), () {
+                        _checkTextSelection();
+                      });
+                    },
+                    onChanged: (_) {
+                      _checkTextSelection();
+                      // Add another delayed check to catch selection after keyboard actions
+                      Future.delayed(const Duration(milliseconds: 200), () {
+                        if (mounted) _checkTextSelection();
+                      });
+                    },
                   ),
                 ),
                 
-                // Floating toolbar that shows after 5 seconds of inactivity
-                if (_showToolbar)
+                // Floating toolbar
+                if (_showToolbar || _hasTextSelection)
                   Positioned(
-                    bottom: 20,
-                    right: 20,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2A2A2A),
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.3),
-                            blurRadius: 10,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.format_bold, color: Colors.white),
-                            onPressed: () => _insertFormatting('**', '**'),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.format_italic, color: Colors.white),
-                            onPressed: () => _insertFormatting('_', '_'),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.format_list_bulleted, color: Colors.white),
-                            onPressed: () => _insertFormatting('\n- ', ''),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.format_list_numbered, color: Colors.white),
-                            onPressed: () => _insertFormatting('\n1. ', ''),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.image, color: Colors.white),
-                            onPressed: _insertImage,
-                          ),
-                        ],
+                    bottom: 100,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2A2A2A),
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.5),
+                              blurRadius: 12,
+                              spreadRadius: 2,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.format_bold, color: Colors.white),
+                              tooltip: 'Bold',
+                              onPressed: () => _insertFormatting('**', '**'),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.format_italic, color: Colors.white),
+                              tooltip: 'Italic',
+                              onPressed: () => _insertFormatting('_', '_'),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.format_strikethrough, color: Colors.white),
+                              tooltip: 'Strikethrough',
+                              onPressed: () => _insertFormatting('~~', '~~'),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.format_list_bulleted, color: Colors.white),
+                              tooltip: 'Bulleted List',
+                              onPressed: () => _insertFormatting('\n- ', ''),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.format_list_numbered, color: Colors.white),
+                              tooltip: 'Numbered List',
+                              onPressed: () => _insertFormatting('\n1. ', ''),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.image, color: Colors.white),
+                              tooltip: 'Insert Image',
+                              onPressed: _insertImage,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -417,39 +550,5 @@ class _NoteEditorViewState extends State<NoteEditorView> {
         ],
       ),
     );
-  }
-  
-  void _insertFormatting(String prefix, String suffix) {
-    final currentText = _contentController.text;
-    final selection = _contentController.selection;
-    
-    if (selection.isValid) {
-      final selectedText = currentText.substring(selection.start, selection.end);
-      final newText = prefix + selectedText + suffix;
-      
-      final newTextWithReplacement = currentText.replaceRange(
-        selection.start, 
-        selection.end, 
-        newText
-      );
-      
-      _contentController.text = newTextWithReplacement;
-      _contentController.selection = TextSelection(
-        baseOffset: selection.start + prefix.length,
-        extentOffset: selection.end + prefix.length,
-      );
-    } else {
-      final currentPosition = selection.baseOffset;
-      final newText = currentText.substring(0, currentPosition) + 
-                     prefix + suffix + 
-                     currentText.substring(currentPosition);
-      
-      _contentController.text = newText;
-      _contentController.selection = TextSelection.collapsed(
-        offset: currentPosition + prefix.length,
-      );
-    }
-    
-    _resetTypingTimer();
   }
 } 
