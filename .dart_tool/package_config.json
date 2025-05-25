@@ -98,12 +98,6 @@
       "languageVersion": "2.12"
     },
     {
-      "name": "file_picker",
-      "rootUri": "file:///C:/Users/user/AppData/Local/Pub/Cache/hosted/pub.dev/file_picker-4.6.1",
-      "packageUri": "lib/",
-      "languageVersion": "2.12"
-    },
-    {
       "name": "file_selector_linux",
       "rootUri": "file:///C:/Users/user/AppData/Local/Pub/Cache/hosted/pub.dev/file_selector_linux-0.9.3+2",
       "packageUri": "lib/",
@@ -560,7 +554,7 @@
       "languageVersion": "2.19"
     }
   ],
-  "generated": "2025-05-23T17:20:15.279635Z",
+  "generated": "2025-05-25T19:04:31.428282Z",
   "generator": "pub",
   "generatorVersion": "3.6.1",
   "flutterRoot": "file:///D:/file%20naser/kebutuhan%20sekolah/flutter",
